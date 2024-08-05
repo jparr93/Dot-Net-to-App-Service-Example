@@ -1,0 +1,67 @@
+trigger:
+- main
+
+pool:
+    name: on-prem
+
+variables:
+  # Azure service connection name
+  azureSubscription: 'jp'
+  
+  # App Service name and resource group
+  appServiceName: 'test-ado-web-app-jp'
+  resourceGroupName: 'devday'
+  # Artifact name
+  artifactName: 'drop'
+
+stages:
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+  - job: Build
+    displayName: 'Build Job'
+    pool:
+      name: on-prem
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '6.0.x' # Specify the .NET SDK version
+
+    - script: dotnet restore $(Build.SourcesDirectory)\pipelines-dotnet-core.csproj
+      displayName: 'Restore dependencies'
+
+    - script: dotnet build $(Build.SourcesDirectory)\pipelines-dotnet-core.csproj --configuration Release --no-restore
+      displayName: 'Build the project'
+
+    - script: dotnet publish $(Build.SourcesDirectory)\pipelines-dotnet-core.csproj --configuration Release --output $(Build.ArtifactStagingDirectory)
+      displayName: 'Publish the project'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: $(artifactName)
+        publishLocation: 'Container'
+
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Build
+  jobs:
+  - deployment: DeployWeb
+    displayName: 'Deploy to Azure App Service'
+    environment: 'production'
+    pool:
+      name: on-prem
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifactName)
+
+          - task: AzureWebApp@1
+            inputs:
+              appType: webApp
+              azureSubscription: $(azureSubscription)
+              appName: $(appServiceName)
+              package: $(Pipeline.Workspace)/$(artifactName)/**/*.zip
