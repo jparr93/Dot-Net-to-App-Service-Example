@@ -68,4 +68,4 @@ stages:
               appType: webApp
               azureSubscription: $(azureSubscription)
               appName: $(appServiceName)
-              package: $(Build.ArtifactStagingDirectory)/$(artifactName)/**/*.zip
+              package: $(Build.ArtifactStagingDirectory)/$(artifactName)
