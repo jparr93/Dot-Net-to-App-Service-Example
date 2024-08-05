@@ -56,13 +56,12 @@ stages:
       runOnce:
         deploy:
           steps:
-          - download: none
-
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download Build Artifacts'
+          - task: DownloadBuildArtifacts@0
             inputs:
-                patterns: '**/*.zip'
-                path: '$(Build.ArtifactStagingDirectory)'
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
 
           - task: AzureWebApp@1
             inputs:
